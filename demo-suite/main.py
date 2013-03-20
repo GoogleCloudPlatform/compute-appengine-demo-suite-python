@@ -19,14 +19,14 @@ from __future__ import with_statement
 __author__ = 'kbrisbin@google.com (Kathryn Hurley)'
 
 import lib_path
-import gc_appengine.gc_oauth as gc_oauth
+import google_cloud.oauth as oauth
 import jinja2
 import webapp2
 
 from google.appengine.api import users
 
 jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(''))
-decorator = gc_oauth.decorator
+decorator = oauth.decorator
 
 
 class Main(webapp2.RequestHandler):

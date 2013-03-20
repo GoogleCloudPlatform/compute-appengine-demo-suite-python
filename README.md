@@ -51,40 +51,50 @@ instructions.
    More information about Service accounts can be found in the
    [API client library documentation][4].
 
-4. Update the DEFAULT_PROJECT_ID in lib/gc_appengine/gce_appengine.py
-   with your own project id:
+4. The Fractal demo also requires 2 files to be stored on [Cloud Storage][5].
+   Create a bucket on Cloud Storage and upload the image_handler.py and
+   mandelbrot.jar files found in demos/fractal/vm_files to that bucket.
+   Change the path to the files in the Fractal Demo's startup.sh file to point
+   to your Cloud Storage files.
 
-   DEFAULT_PROJECT_ID = "your-project-id"
+5. Update the project value in the settings.json file with your own project id:
+
+   "project": "your-project-id",
 
    Information on how to get your Compute Engine project ID can be found
-   in the [Compute Engine documentation][5].
+   in the [Compute Engine documentation][6].
 
-5. (optional) You can optionally create custom images for the Fractal and
-   Image Magick demos that will allow the instances to start quicker. First, start
-   the instances using the demo UI. When at least one of the instances is up
-   and running, ssh into that instance and follow the directions [here][6] for
-   creating an image for an instance.
+6. (optional) Update any of the other defaults in the settings.json to
+   match your preferences.
 
-   Name the images 'fractal-demo-image' and 'image-magick-demo-image' respectively.
+7. (optional) You can optionally create custom images for the Fractal and
+   Image Magick demos that will allow the instances to start quicker. First,
+   start the instances using the demo UI. When at least one of the instances
+   is up and running, ssh into that instance and follow the directions
+   [here][7] for creating an image for an instance.
 
-6. Install dependencies listed in the dependencies section.
+   Name the images 'fractal-demo-image' and 'image-magick-demo-image'
+   respectively.
+
+8. Install dependencies listed in the dependencies section.
 
 ## Dependencies
 
 Add to /lib directory
-- [python_gflags-2.0][7]
-- [httplib2-0.7.7][8]
-- [oauth2client-1.0][9]
-- [gcelib][10]
+- [python_gflags-2.0][8]
+- [httplib2-0.7.7][9]
+- [oauth2client-1.0][10]
+- [google-api-python-client][11]
 
 
 [1]: http://gce-demos.appspot.com
 [2]: https://developers.google.com/appengine/docs/python/config/appconfig#About_app_yaml
 [3]: https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
 [4]: https://developers.google.com/api-client-library/python/platforms/google_app_engine#ServiceAccounts
-[5]: https://developers.google.com/compute/docs/faq#wherecanifind
-[6]: https://developers.google.com/compute/docs/images#installinganimage
-[7]: http://code.google.com/p/python-gflags/
-[8]: http://code.google.com/p/httplib2/
-[9]: http://pypi.python.org/pypi/oauth2client/1.0
-[10]: https://developers.google.com/compute/docs/gcelib/using
+[5]: https://developers.google.com/storage/
+[6]: https://developers.google.com/compute/docs/faq#wherecanifind
+[7]: https://developers.google.com/compute/docs/images#installinganimage
+[8]: http://code.google.com/p/python-gflags/
+[9]: http://code.google.com/p/httplib2/
+[10]: http://pypi.python.org/pypi/oauth2client/1.0
+[11]: https://code.google.com/p/google-api-python-client/

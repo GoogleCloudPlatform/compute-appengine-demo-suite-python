@@ -68,8 +68,7 @@ class Cs(object):
             'Date': str_date,
             'x-goog-project-id': self.project_id,
             'x-goog-api-version': API_VERSION,
-            'Content-Type': content_type
-            })
+            'Content-Type': content_type})
     return result.content
 
   def delete_bucket_contents(self, oauth_token, bucket, directory=None,
@@ -93,8 +92,7 @@ class Cs(object):
             'Authorization': 'OAuth %s' % (oauth_token),
             'Date': str_date,
             'x-goog-project-id': self.project_id,
-            'x-goog-api-version': API_VERSION
-            })
+            'x-goog-api-version': API_VERSION})
     dom = minidom.parseString(result.content)
     keys = dom.getElementsByTagName('Key')
     for key_element in keys:
@@ -108,8 +106,7 @@ class Cs(object):
               'Authorization': 'OAuth %s' % (oauth_token),
               'Date': str_date,
               'x-goog-project-id': self.project_id,
-              'x-goog-api-version': API_VERSION
-              })
+              'x-goog-api-version': API_VERSION})
 
   def _get_text(self, nodes):
     """Concatenates the text from several XML nodes.

@@ -16,7 +16,7 @@
 
 __author__ = 'kbrisbin@google.com (Kathryn Hurley)'
 
-import cs.cs as cs
+import cs
 import lib_path
 
 from google.appengine.ext import deferred

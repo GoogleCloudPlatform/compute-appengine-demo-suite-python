@@ -65,7 +65,7 @@ ImageMagick.prototype.CLEAN_CS_URL_ = '/' + DEMO_NAME + '/gcs-cleanup';
 ImageMagick.prototype.initialize = function() {
   var instanceNames = [];
   for (var i = 0; i < this.NUM_INSTANCES_; i++) {
-    instanceNames.push(TAG + '-' + i);
+    instanceNames.push(DEMO_NAME + '-' + i);
   }
   var squares = new Squares(
       document.getElementById('instances'), instanceNames, {

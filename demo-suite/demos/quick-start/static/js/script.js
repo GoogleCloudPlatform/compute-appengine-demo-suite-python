@@ -62,7 +62,7 @@ QuickStart.prototype.initializeButtons_ = function(gce, counter, timer) {
 
     var instanceNames = [];
     for (var i = 0; i < numInstances; i++) {
-      instanceNames.push(TAG + '-' + i);
+      instanceNames.push(DEMO_NAME + '-' + i);
     }
 
     // Initialize the squares, set the Gce options, and start the instances.

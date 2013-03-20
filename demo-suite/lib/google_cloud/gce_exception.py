@@ -25,3 +25,7 @@ class GcelibError(Exception):
 class GceError(Exception):
   """GceError raised during improper use of the GceAppEngineHelper class."""
   pass
+
+class GceTokenError(Exception):
+  """Error raised when there's an issue refreshing the access token."""
+  pass
