@@ -19,7 +19,7 @@ instructions.
    More information about the app.yaml file can be found in the [App
    Engine documentation][2].
 
-2. Add a client_secrets.json file within the lib/gc_appengine directory
+2. Add a client_secrets.json file within the lib/google_cloud directory
    with your client id and secrets, as found in the API console. The file
    should look something like this:
 

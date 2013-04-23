@@ -4,7 +4,7 @@
         "api_version": "v1beta14",
         "image": "gcel-12-04-v20130104",
         "machine_type": "n1-standard-1",
-        "zone": "us-central1-a",
+        "zone": "us-central2-a",
         "network": "default",
         "access_configs": [{
             "name": "External IP access config",

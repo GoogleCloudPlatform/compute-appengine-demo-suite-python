@@ -28,6 +28,7 @@ from google.appengine.ext import db
 jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(''))
 
 GCE_PROJECT_ID = 'gce-project-id'
+GCE_ZONE_NAME = 'gce-zone-name'
 GCS_PROJECT_ID = 'gcs-project-id'
 GCS_BUCKET = 'gcs-bucket'
 GCS_DIRECTORY = 'gcs-directory'
@@ -37,6 +38,12 @@ DEFAULTS = {
         'required': True,
         'label': 'Compute Engine Project ID (e.g.: compute-engine-project)',
         'name': GCE_PROJECT_ID
+    },
+    GCE_ZONE_NAME: {
+        'type': 'string',
+        'required': True,
+        'label': 'Compute Engine Zone (e.g.: us-central2-a)',
+        'name': GCE_ZONE_NAME
     },
     GCS_PROJECT_ID: {
         'type': 'string',

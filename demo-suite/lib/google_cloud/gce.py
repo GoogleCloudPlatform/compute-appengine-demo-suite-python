@@ -250,7 +250,7 @@ class GceProject(object):
     resource.set_defaults()
     params = {'project': self.project_id, 'body': resource.json}
     if resource.scope == 'zonal':
-      params['zone'] = resource.zone.name
+      params['zone'] = self.zone_name
     return resource.service_resource().insert(**params)
 
   def _list_request(self, resource, zone_name=None, **args):
@@ -261,7 +261,7 @@ class GceProject(object):
       zone_name: The string zone name. Only applicable for zonal resources.
 
     Returns:
-      The insert method of the apiclient.discovery.Resource object.
+      The list method of the apiclient.discovery.Resource object.
     """
 
     params = {'project': self.project_id}
@@ -286,7 +286,7 @@ class GceProject(object):
     resource.set_defaults()
     params = {'project': self.project_id, resource.type: resource.name}
     if resource.scope == 'zonal':
-      params['zone'] = resource.zone.name
+      params['zone'] = self.zone_name
     return resource.service_resource().delete(**params)
 
   def _run_request(self, request):
@@ -506,7 +506,7 @@ class Instance(GceResource):
     """
 
     self.name = json_resource['name']
-    self.zone = Zone(json_resource['zone'].split('/')[-1])
+    self.zone_namezone = Zone(json_resource['zone'].split('/')[-1])
     self.image = Image(json_resource['image'].split('/')[-1])
     self.machine_type = MachineType(json_resource['machineType'].split('/')[-1])
     self.network_interfaces = json_resource['networkInterfaces']

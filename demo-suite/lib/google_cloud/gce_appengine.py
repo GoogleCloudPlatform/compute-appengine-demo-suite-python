@@ -21,7 +21,6 @@ import gce_exception as error
 
 MAX_RESULTS = 100
 
-
 class GceAppEngine(object):
   """Contains generic GCE methods for demos."""
 

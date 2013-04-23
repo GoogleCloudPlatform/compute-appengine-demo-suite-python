@@ -34,7 +34,8 @@ DEMO_NAME = 'quick-start'
 jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(''))
 oauth_decorator = oauth.decorator
 parameters = [
-    user_data.DEFAULTS[user_data.GCE_PROJECT_ID]
+    user_data.DEFAULTS[user_data.GCE_PROJECT_ID],
+    user_data.DEFAULTS[user_data.GCE_ZONE_NAME]
 ]
 data_handler = user_data.DataHandler(DEMO_NAME, parameters)
 
@@ -67,8 +68,10 @@ class Instance(webapp2.RequestHandler):
     """
 
     gce_project_id = data_handler.stored_user_data[user_data.GCE_PROJECT_ID]
+    gce_zone_name = data_handler.stored_user_data[user_data.GCE_ZONE_NAME]
     gce_project = gce.GceProject(
-        oauth_decorator.credentials, project_id=gce_project_id)
+        oauth_decorator.credentials, project_id=gce_project_id,
+        zone_name=gce_zone_name)
     gce_appengine.GceAppEngine().list_demo_instances(
         self, gce_project, DEMO_NAME)
 
@@ -77,10 +80,12 @@ class Instance(webapp2.RequestHandler):
     """Start instances using the gce_appengine helper class."""
 
     gce_project_id = data_handler.stored_user_data[user_data.GCE_PROJECT_ID]
+    gce_zone_name = data_handler.stored_user_data[user_data.GCE_ZONE_NAME]
     user_id = users.get_current_user().user_id()
     credentials = oauth2client.StorageByKeyName(
         oauth2client.CredentialsModel, user_id, 'credentials').get()
-    gce_project = gce.GceProject(credentials, project_id=gce_project_id)
+    gce_project = gce.GceProject(credentials, project_id=gce_project_id,
+        zone_name=gce_zone_name)
 
     num_instances = int(self.request.get('num_instances'))
     instances = [gce.Instance('%s-%d' % (DEMO_NAME, i))
@@ -103,10 +108,12 @@ class Cleanup(webapp2.RequestHandler):
   def post(self):
     """Stop instances using the gce_appengine helper class."""
     gce_project_id = data_handler.stored_user_data[user_data.GCE_PROJECT_ID]
+    gce_zone_name = data_handler.stored_user_data[user_data.GCE_ZONE_NAME]
     user_id = users.get_current_user().user_id()
     credentials = oauth2client.StorageByKeyName(
         oauth2client.CredentialsModel, user_id, 'credentials').get()
-    gce_project = gce.GceProject(credentials, project_id=gce_project_id)
+    gce_project = gce.GceProject(credentials, project_id=gce_project_id,
+        zone_name=gce_zone_name)
     gce_appengine.GceAppEngine().delete_demo_instances(
         self, gce_project, DEMO_NAME)
 
