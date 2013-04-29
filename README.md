@@ -11,15 +11,15 @@ instructions.
 
 ## Setup Instructions
 
-1. Update the application value in the root app.yaml file to your own
+1. Update the application value in the root `app.yaml` file to your own
    App Engine app identity.
 
-   application: your-app-id
+        application: your-app-id
 
    More information about the app.yaml file can be found in the [App
    Engine documentation][2].
 
-2. Add a client_secrets.json file within the lib/google_cloud directory
+2. Add a `client_secrets.json` file within the `lib/google_cloud` directory
    with your client id and secrets, as found in the API console. The file
    should look something like this:
 
@@ -40,10 +40,11 @@ instructions.
    More information about client secrets can be found in the
    [API client library documentation][3].
 
-3. The Fractal demo requires addition of a Service email account to your
-   project team members. The Service email account is of the format
+3. [Fractal Demo] The Fractal demo requires addition of a Service email
+   account to your project team members. The Service email account is of the
+   format
 
-   your-app-id@appspot.gserviceaccount.com
+        your-app-id@appspot.gserviceaccount.com
 
    Add this to your list of team members in the API console under the Team
    section.
@@ -51,15 +52,16 @@ instructions.
    More information about Service accounts can be found in the
    [API client library documentation][4].
 
-4. The Fractal demo also requires 2 files to be stored on [Cloud Storage][5].
-   Create a bucket on Cloud Storage and upload the image_handler.py and
-   mandelbrot.jar files found in demos/fractal/vm_files to that bucket.
-   Change the path to the files in the Fractal Demo's startup.sh file to point
-   to your Cloud Storage files.
+4. [Fractal Demo] The Fractal demo also requires 2 files to be stored on
+   [Cloud Storage][5]. Create a bucket on Cloud Storage and upload the
+   `image_handler.py` and `mandelbrot.jar` files found in `demos/fractal/vm_files`
+   to that bucket. Change the path to the files in the Fractal Demo's
+   `startup.sh` file to point to your Cloud Storage files.
 
-5. Update the project value in the settings.json file with your own project id:
+5. [Fractal Demo] Update the project value in the settings.json file with your
+   own project id:
 
-   "project": "your-project-id",
+        "project": "your-project-id",
 
    Information on how to get your Compute Engine project ID can be found
    in the [Compute Engine documentation][6].
@@ -73,18 +75,28 @@ instructions.
    is up and running, ssh into that instance and follow the directions
    [here][7] for creating an image for an instance.
 
-   Name the images 'fractal-demo-image' and 'image-magick-demo-image'
+   Name the images `fractal-demo-image` and `image-magick-demo-image`
    respectively.
 
-8. Install dependencies listed in the dependencies section.
+8. Install dependencies listed in the dependencies section into the `ext_lib`
+   directory. You can do this easily by executing the
+   `download_dependencies.sh` bash script. Beware that this will delete all
+   current contents of the `ext_lib` dir and download the dependencies fresh.
 
 ## Dependencies
 
-Add to /lib directory
+Add to `ext_lib` directory:
+
 - [python_gflags-2.0][8]
-- [httplib2-0.7.7][9]
+- [httplib2-0.8][9]
 - [oauth2client-1.0][10]
 - [google-api-python-client][11]
+
+When adding new dependencies do the following:
+
+1. Add them to the list here
+2. Add them to the `download_dependencies.sh` script.
+3. Add them to `demo-suite/lib_path.py`
 
 
 [1]: http://gce-demos.appspot.com

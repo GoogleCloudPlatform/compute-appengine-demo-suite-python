@@ -20,3 +20,20 @@ import os
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'lib'))
+
+sys.path.append(os.path.join(os.path.dirname(__file__), 
+                             'ext_lib',
+                             'httplib2-0.8',
+                             'python2'))
+
+sys.path.append(os.path.join(os.path.dirname(__file__), 
+                            'ext_lib',
+                            'google-api-python-client-1.1'))
+
+sys.path.append(os.path.join(os.path.dirname(__file__), 
+                            'ext_lib',
+                            'oauth2client-1.0'))
+                            
+sys.path.append(os.path.join(os.path.dirname(__file__), 
+                            'ext_lib',
+                            'python-gflags-2.0'))
