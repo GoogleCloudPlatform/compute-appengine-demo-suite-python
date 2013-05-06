@@ -5,101 +5,250 @@
  * instance to 16.
  */
 
+var fractal1
+
 $(document).ready(function() {
-  var mapsContainer = document.getElementById('maps');
-  var fractal = new Fractal(mapsContainer);
-  fractal.initialize();
+  $('.btn').button();
+  configSpinner();
+  var fractal16 = new Fractal($('#fractal16'), FAST_MAP_INSTANCE_TAG,
+    NUM_FAST_MAP_INSTANCES);
+  fractal16.initialize();
+  fractal1 = new Fractal($('#fractal1'), SLOW_MAP_INSTANCE_TAG,
+    NUM_SLOW_MAP_INSTANCES, fractal16);
+  fractal1.initialize();
+
+  $('#start').click(function() {
+    fractal1.start();
+    fractal16.start();
+  });
+  $('#reset').click(function() {
+    fractal1.reset();
+    fractal16.reset();
+  });
+
+  fractal1.checkRunning();
+  fractal16.checkRunning();
 });
 
 /**
+ * Total number of instances to start for the 'slow' map.
+ * @type {number}
+ * @constant
+ */
+var NUM_SLOW_MAP_INSTANCES = 1;
+
+/**
+ * Name for 'slow' map.
+ * @type {string}
+ * @constant
+ */
+var SLOW_MAP_INSTANCE_TAG = 'map1';
+
+/**
+ * Total number of instances to start for the 'slow' map.
+ * @type {number}
+ * @constant
+ */
+var NUM_FAST_MAP_INSTANCES = 16;
+
+/**
+ * Name for 'slow' map.
+ * @type {string}
+ * @constant
+ */
+var FAST_MAP_INSTANCE_TAG = 'map16';
+
+
+/**
+ * Configure spinner to show when there is an outstanding Ajax request.
+ *
+ * This really helps to show that something is going on.  It is the
+ * simplest blinking light that we can add.
+ */
+function configSpinner() {
+  $('#spinner')
+    .css('visibility', 'hidden')
+    .ajaxStart(function() {
+        $('#spinner').css('visibility', '');
+    })
+    .ajaxStop(function() {
+        $('#spinner').css('visibility', 'hidden');
+    })
+  ;
+}
+
+/**
  * Fractal class.
- * @param {Element} mapsContainer HTML element in which to display the maps.
+ * @param {Element} container HTML element in which to display the map.
+ * @param {string} tag A unique string ('single') used to identify instances
+ * @param {number} num_instances Number of instances to start
+ * @param {Fractal} slave_fractal Another fractal instance to sync map
+ *  position and zoom to.
  * @constructor
  */
-var Fractal = function(mapsContainer) {
-  this.mapsContainer_ = mapsContainer;
+var Fractal = function(container, tag, num_instances, slave_fractal) {
+  /**
+   * An HTML object that will contain this fractal map.
+   * @type {Element}
+   * @private
+   */
+  this.container_ = container;
+
+  /**
+   * The element that holds the map itself.
+   * @type {Element}
+   * @private
+   */
+  this.mapContainer_ = null;
+
+
+  /**
+   * The squares object that will track the state of the VMs.
+   * @type {Squares}
+   * @private
+   */
+  this.squares_ = null;
+
+  /**
+   * A unique string to use for naming instances. Also used as a user visible
+   *  label on the map.
+   * @type {string}
+   * @private
+   */
+  this.tag_ = tag;
+
+  /**
+   * The GCE control object.
+   * @type {GCE}
+   * @private
+   */
+  this.gce_ = null;
+
+  /**
+   * The Map control object
+   * @type {Map}
+   */
+  this.map = null;
+
+  /**
+   * The number of instances to launch for this map.
+   * @type {[type]}
+   * @private
+   */
+  this.num_instances_ = num_instances;
+
+  /**
+   * The other Fractal instance to sync our zoom/position to.
+   * @type {Fractal}
+   */
+  this.slave_fractal_ = slave_fractal;
 };
-
-/**
- * HTML element in which to display the maps.
- * @type {Element}
- * @private
- */
-Fractal.prototype.mapsContainer_ = null;
-
-/**
- * Total number of instances to start for the 'slow' map. A perfect square
- * value is required.
- * @type {number}
- * @private
- */
-Fractal.prototype.NUM_SLOW_MAP_INSTANCES_ = 1;
-
-/**
- * Extra addition to the instance name(s) of the 'slow' map instance(s).
- * @type {string}
- * @private
- */
-Fractal.prototype.SLOW_MAP_INSTANCE_TAG_ = '-slow';
-
-/**
- * Total number of instances to start for the 'fast' map. A perfect square
- * value is required.
- * @type {number}
- * @private
- */
-Fractal.prototype.NUM_FAST_MAP_INSTANCES_ = 16;
-
-/**
- * Extra addition to the instance name(s) of the 'fast' map instance(s).
- * @type {string}
- * @private
- */
-Fractal.prototype.FAST_MAP_INSTANCE_TAG_ = '-fast';
 
 /**
  * The map center latitude.
  * @type {number}
  * @private
  */
-Fractal.prototype.LATITUDE_ = 85;
+Fractal.prototype.LATITUDE_ = 1.75;
 
 /**
  * The map center longitude.
  * @type {number}
  * @private
  */
-Fractal.prototype.LONGITUDE_ = -179.6;
+Fractal.prototype.LONGITUDE_ = 15;
 
 /**
  * Initialize the UI and check if there are instances already up.
  */
 Fractal.prototype.initialize = function() {
-  // TAG is set in the index.html template file.
-  var gce = new Gce('/' + TAG + '/instance',
-      '/' + TAG + '/instance',
-      '/' + TAG + '/cleanup');
+  // Set up the DOM under container_
+  var squaresRow = $('<div>').addClass('row').addClass('squares-row');
+  var squaresContainer = $('<div>').addClass('span6').addClass('squares');
+  squaresRow.append(squaresContainer);
+  $(this.container_).append(squaresRow);
 
-  var that = this;
-  gce.checkIfRunning(function(data, numRunning) {
-    var total = that.NUM_SLOW_MAP_INSTANCES_ + that.NUM_FAST_MAP_INSTANCES_;
-    if (numRunning == total) {
-      that.mapIt_(data);
-    } else {
-      gce.startInstances(total, {
-        data: {
-          'num_slow_map_instances': that.NUM_SLOW_MAP_INSTANCES_,
-          'slow_map_instance_tag': TAG + that.SLOW_MAP_INSTANCE_TAG_,
-          'num_fast_map_instances': that.NUM_FAST_MAP_INSTANCES_,
-          'fast_map_instance_tag': TAG + that.FAST_MAP_INSTANCE_TAG_
-        },
-        callback: function(data) {
-          that.mapIt_(data);
-        }
+  var mapRow = $('<div>').addClass('row').addClass('map-row');
+  $(this.container_).append(mapRow);
+
+  // Initialize the squares
+  var instanceNames = [];
+  for (var i = 0; i < this.num_instances_; i++) {
+    instanceNames.push(DEMO_NAME + '-' + this.tag_ + '-' + padNumber(i, 2));
+  }
+
+  this.squares_ = new Squares(
+      squaresContainer.get(0), instanceNames, {
+        cols: 8
       });
+  this.squares_.drawSquares();
+
+  // DEMO_NAME is set in the index.html template file.
+  this.gce_ = new Gce('/' + DEMO_NAME + '/instance',
+      '/' + DEMO_NAME + '/instance',
+      '/' + DEMO_NAME + '/cleanup',
+      null, { 'tag': this.tag_ });
+  this.gce_.setOptions({
+      squares: this.squares_
+    });
+}
+
+/**
+ * Check to see if things are already running. If so, start up the map. Good
+ *    on a refresh when the map is already loaded.
+ */
+Fractal.prototype.checkRunning = function() {
+  var that = this;
+  that.gce_.getInstanceStates(function(data, stateSummary) {
+    if (stateSummary['SERVING'] >= that.num_instances_) {
+      that.mapIt_(data);
     }
   });
 };
+
+
+/**
+ * Start up the instances if necessary. When the instances are confirmed to be
+ *  running then show the map.
+ */
+Fractal.prototype.start = function() {
+  this.startInstances_();
+};
+
+/**
+ * Reset the map.  Shut down the instances and clear the map.
+ */
+Fractal.prototype.reset = function() {
+    this.stopMap_();
+    this.gce_.stopInstances();
+};
+
+Fractal.prototype.startInstances_ = function() {
+  var that = this;
+  this.gce_.startInstances(that.num_instances_, {
+    data: {
+      'num_instances': that.num_instances_
+    },
+    checkServing: true,
+    callback: function(data) {
+      that.mapIt_(data);
+    }
+  })
+}
+
+/**
+ * Try to cleanup/delete any running map
+ */
+Fractal.prototype.stopMap_ = function() {
+  if (this.map) {
+    this.map.unbindAll();
+    delete this.map;
+  }
+  if (this.mapContainer_) {
+    $(this.mapContainer_).remove();
+    this.mapContainer_ = null;
+  }
+}
 
 /**
  * Get external IPs, create maps, add listeners to maps.
@@ -107,12 +256,10 @@ Fractal.prototype.initialize = function() {
  * @private
  */
 Fractal.prototype.mapIt_ = function(data) {
+  this.stopMap_();
   var ips = this.getIps_(data);
-  var slowMap = this.prepMap_(
-      ips['slow_map_ips'], 30, 9, 256);
-  var fastMap = this.prepMap_(
-      ips['fast_map_ips'], 30, 9, 256);
-  this.addListeners_(slowMap, fastMap);
+  this.map = this.prepMap_(ips, 25, 1, 256);
+  this.addListeners_();
 };
 
 /**
@@ -131,13 +278,13 @@ Fractal.prototype.prepMap_ = function(ips, maxZoom, minZoom, tileSize) {
     getTileUrl: function(coord, zoom) {
       var url = ['http://'];
       if (ips.length > 1) {
-        var ip = (coord.x * Math.sqrt(numInstances) + coord.y) % numInstances;
-        ip = ip >= 0 ? ip : ip + numInstances - 1;
-        url.push(ips[ip]);
+        var instanceIdx = Math.abs(coord.x + (4 * coord.y)) % numInstances;
+        // var instanceIdx = Math.abs(Math.round(coord.x * Math.sqrt(numInstances) + coord.y)) % numInstances;
+        url.push(ips[instanceIdx]);
       } else {
         url.push(ips[0]);
       }
-      url.push('/tile?zoom=');
+      url.push('/tile?z=');
       url.push(zoom);
       url.push('&x=');
       url.push(coord.x);
@@ -151,61 +298,57 @@ Fractal.prototype.prepMap_ = function(ips, maxZoom, minZoom, tileSize) {
     name: 'Fractal' + numInstances
   };
 
-  var mapId = 'map-canvas' + numInstances;
-  var mapElement = document.createElement('div');
-  mapElement.id = mapId;
-  mapElement.className = 'span6';
-  $(this.mapsContainer_).append(mapElement);
-  var map = this.drawMap_(document.getElementById(mapId),
+  this.mapContainer_ = $('<div>');
+  this.mapContainer_.addClass('span6');
+  this.mapContainer_.addClass('map-container');
+  $(this.container_).find('.map-row').append(this.mapContainer_);
+  var map = this.drawMap_(this.mapContainer_,
       fractalTypeOptions, 'fractal' + numInstances);
   return map;
 };
 
 /**
  * Add listeners to maps so that they zoom and pan in unison.
- * @param {google.maps.Map} slowMap The slow Google Maps Instance.
- * @param {google.maps.Map} fastMap The fast Google Maps Instance.
  * @private
  */
-Fractal.prototype.addListeners_ = function(slowMap, fastMap) {
+Fractal.prototype.addListeners_ = function() {
   // Add listeners to the map on the left so that the zoom and center
   // is reflected on both maps.
-  google.maps.event.addListener(slowMap, 'zoom_changed', function() {
-    var zoom = slowMap.getZoom();
-    fastMap.setZoom(zoom);
-  });
-  google.maps.event.addListener(slowMap, 'center_changed', function() {
-    var center = slowMap.getCenter();
-    fastMap.setCenter(center);
-  });
+  if (this.slave_fractal_) {
+    var that = this;
+    google.maps.event.addListener(this.map, 'zoom_changed', function() {
+      if (that.slave_fractal_.map) {
+        var zoom = that.map.getZoom();
+        that.slave_fractal_.map.setZoom(zoom);
+      }
+    });
+    google.maps.event.addListener(this.map, 'center_changed', function() {
+      if (that.slave_fractal_.map) {
+        var center = that.map.getCenter();
+        that.slave_fractal_.map.setCenter(center);
+      }
+    });
+  }
 };
 
 /**
  * Get the external IPs of the instances from the returned data.
  * @param {Object} data Data returned from the list instances call to GCE.
- * @return {Object} The list of ips for the 'slow' and 'fast' maps.
+ * @return {Object} The list of ips.
  * @private
  */
 Fractal.prototype.getIps_ = function(data) {
-  var fastMapIps = [];
+  var ips = [];
   var slowMapIps = [];
   for (var instanceName in data) {
-    // If fast map tag has an index of 0 in the instance name, this is false.
-    if (instanceName.search(TAG + this.FAST_MAP_INSTANCE_TAG_)) {
-      slowMapIps.push(data[instanceName]['externalIp']);
-    } else {
-      fastMapIps.push(data[instanceName]['externalIp']);
-    }
+    ips.push(data[instanceName]['externalIp']);
   }
-  return {
-    'fast_map_ips': fastMapIps,
-    'slow_map_ips': slowMapIps
-  };
+  return ips;
 };
 
 /**
  * Draw the map.
- * @param {Element} canvas The HTML element in which to display the map.
+ * @param {JQuery} canvas The HTML element in which to display the map.
  * @param {Object} fractalTypeOptions Options for displaying the map.
  * @param {string} mapTypeId A unique map type id.
  * @return {google.maps.Map} Returns the map object.
@@ -216,7 +359,7 @@ Fractal.prototype.drawMap_ = function(canvas, fractalTypeOptions, mapTypeId) {
 
   var mapOptions = {
     center: new google.maps.LatLng(this.LATITUDE_, this.LONGITUDE_),
-    zoom: 9,
+    zoom: 1,
     streetViewControl: false,
     mapTypeControlOptions: {
       mapTypeIds: [mapTypeId]
@@ -226,7 +369,7 @@ Fractal.prototype.drawMap_ = function(canvas, fractalTypeOptions, mapTypeId) {
     }
   };
 
-  var map = new google.maps.Map(canvas, mapOptions);
+  var map = new google.maps.Map(canvas.get(0), mapOptions);
   map.mapTypes.set(mapTypeId, fractalMapType);
   map.setMapTypeId(mapTypeId);
   return map;

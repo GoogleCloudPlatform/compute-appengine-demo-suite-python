@@ -1,4 +1,12 @@
-#map-canvas1, #map-canvas16 {
+#spinner {
+  vertical-align: middle;
+  display:inline-block;
+}
+
+.map-container {
   height: 450px;
-  width: 450px;
+}
+
+.squares {
+  height: 80px;
 }

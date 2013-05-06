@@ -23,11 +23,14 @@
 /**
  * Counter class displays a counter in the given HTML element.
  * @constructor
- * @param {Element} container The HTML element in which to display the counter.
+ * @param {Element} container The HTML element in which to display the
+ *    counter.
+ * @param {string} targetMetric Either 'numRunning' or 'numAlive' to
+ *    differentiate which state class to count.
  * @param {Object} counterOptions Options for the counter object details can
- *     be found here: http://www.wilmslowastro.com/odometer/odometer.html.
+ *    be found here: http://www.wilmslowastro.com/odometer/odometer.html.
  */
-var Counter = function(container, counterOptions) {
+var Counter = function(container, targetMetric, counterOptions) {
   if (!counterOptions) {
     counterOptions = {
       height: 30,
@@ -38,6 +41,11 @@ var Counter = function(container, counterOptions) {
   }
   var counterElement = container.getContext('2d');
   this.counter_ = new odometer_(counterElement, counterOptions);
+
+  this.targetMetric = 'numRunning';
+  if (targetMetric) {
+    this.targetMetric = targetMetric;
+  }
 };
 
 /**
@@ -55,7 +63,7 @@ Counter.prototype.counter_ = null;
  *     information and 'numRunning' to the number of running instances.
  */
 Counter.prototype.update = function(updateData) {
-  this.counter_.setValue(updateData['numRunning']);
+  this.counter_.setValue(updateData[this.targetMetric]);
 };
 
 /**

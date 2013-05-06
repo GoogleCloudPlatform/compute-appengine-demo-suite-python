@@ -336,7 +336,7 @@ class GceProject(object):
 
     if exception is not None:
       logging.error(exception)
-      logging.error('API Request Error! ' + response)
+      logging.error('API Request Error! ' + str(response))
 
   def _auth_http(self, credentials):
     """Authorize an instance of httplib2.Http using credentials.

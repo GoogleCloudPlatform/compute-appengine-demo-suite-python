@@ -35,10 +35,15 @@ from google.appengine.api import urlfetch
 
 DEMO_NAME = 'fractal'
 IMAGE = 'fractal-demo-image'
+MACHINE_TYPE='n1-highcpu-4'
 FIREWALL = 'www-fractal'
 FIREWALL_DESCRIPTION = 'Fractal Demo Firewall'
 GCE_SCOPE = 'https://www.googleapis.com/auth/compute'
-STARTUP_SCRIPT = os.path.join(os.path.dirname(__file__), 'startup.sh')
+
+VM_FILES = os.path.join(os.path.dirname(__file__), 'vm_files')
+STARTUP_SCRIPT = os.path.join(VM_FILES, 'startup.sh')
+GO_PROGRAM = os.path.join(VM_FILES, 'mandelbrot.go')
+GO_ARGS = '--portBase=80 --numPorts=1'
 
 jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(''))
 oauth_decorator = oauth.decorator
@@ -47,6 +52,17 @@ parameters = [
     user_data.DEFAULTS[user_data.GCE_ZONE_NAME]
 ]
 data_handler = user_data.DataHandler(DEMO_NAME, parameters)
+
+
+class RequestHandler(webapp2.RequestHandler):
+  """Common request handler for the Fractal Demo."""
+  def InstancePrefix(self):
+    """Return a prefix based on a request/query params."""
+    tag = self.request.get('tag')
+    prefix = DEMO_NAME
+    if tag:
+      prefix = prefix + '-' + tag
+    return prefix
 
 
 class Fractal(webapp2.RequestHandler):
@@ -59,10 +75,10 @@ class Fractal(webapp2.RequestHandler):
 
     template = jinja_environment.get_template(
         'demos/%s/templates/index.html' % DEMO_NAME)
-    self.response.out.write(template.render({'tag': DEMO_NAME}))
+    self.response.out.write(template.render({'demo_name': DEMO_NAME}))
 
 
-class Instance(webapp2.RequestHandler):
+class Instance(RequestHandler):
   """Start and list instances."""
 
   @oauth_decorator.oauth_required
@@ -77,42 +93,50 @@ class Instance(webapp2.RequestHandler):
 
     gce_project_id = data_handler.stored_user_data[user_data.GCE_PROJECT_ID]
     gce_zone_name = data_handler.stored_user_data[user_data.GCE_ZONE_NAME]
-    gce_project = gce.GceProject(oauth_decorator.credentials, project_id=gce_project_id, zone_name=gce_zone_name)
+    gce_project = gce.GceProject(oauth_decorator.credentials,
+                                 project_id=gce_project_id,
+                                 zone_name=gce_zone_name)
     instances = gce_appengine.GceAppEngine().run_gce_request(
         self,
         gce_project.list_instances,
         'Error listing instances: ',
-        filter='name eq ^%s.*' % DEMO_NAME)
+        filter='name eq ^%s-.*' % self.InstancePrefix())
 
     # Convert instance info to dict and check server status.
     instance_dict = {}
     if instances:
       for instance in instances:
-        status = None
+        instance_record = {}
+        instance_dict[instance.name] = instance_record
         if instance.status:
-          status = instance.status
+          instance_record['status'] = instance.status
         else:
-          status = 'STAGING'
-        instance_dict[instance.name] = {'status': status}
+          instance_record['status'] = 'OTHER'
         ip = None
         for interface in instance.network_interfaces:
           for config in interface.get('accessConfigs', []):
             if 'natIP' in config:
               ip = config['natIP']
+              instance_record['externalIp'] = ip
               break
           if ip: break
 
         # Ping the instance server. If result is 'ok', set status to
-        # RUNNING. Otherwise, set to STAGING.
-        if ip:
+        # SERVING.
+        if ip and instance.status == 'RUNNING':
           result = None
           try:
-            result = urlfetch.fetch(url='http://%s/health' % ip, deadline=2)
+            logging.debug('Health checking %s', ip)
+            result = urlfetch.fetch(url='http://%s/health' % ip, deadline=1)
+            if result and result.content.strip() == 'ok':
+              logging.debug('%s healthy!', ip)
+              instance_record['status'] = 'SERVING'
+            else:
+              logging.debug('%s unhealthy.  Content: %s', ip, result.content)
           except urlfetch.Error:
-            instance_dict[instance.name]['status'] = 'STAGING'
-          if result and result.content != 'ok':
-            instance_dict[instance.name]['status'] = 'STAGING'
-          instance_dict[instance.name]['externalIp'] = ip
+            logging.debug('%s unhealthy', ip)
+
+        logging.debug('Instance data: %s: %s', instance.name, instance_record)
 
     json_instances = json.dumps(instance_dict)
     self.response.headers['Content-Type'] = 'application/json'
@@ -129,13 +153,14 @@ class Instance(webapp2.RequestHandler):
 
     gce_project_id = data_handler.stored_user_data[user_data.GCE_PROJECT_ID]
     gce_zone_name = data_handler.stored_user_data[user_data.GCE_ZONE_NAME]
-    gce_project = gce.GceProject(oauth_decorator.credentials, project_id=gce_project_id, zone_name=gce_zone_name)
+    gce_project = gce.GceProject(oauth_decorator.credentials,
+                                 project_id=gce_project_id,
+                                 zone_name=gce_zone_name)
 
     # Create the firewall if it doesn't exist.
     firewalls = gce_project.list_firewalls()
     firewall_names = [firewall.name for firewall in firewalls]
     if not FIREWALL in firewall_names:
-      logging.info('creating firewall')
       firewall = gce.Firewall(
           name=FIREWALL,
           target_tags=[DEMO_NAME],
@@ -145,15 +170,9 @@ class Instance(webapp2.RequestHandler):
     custom_image = self._has_custom_image(gce_project)
 
     # Get the list of instances to insert.
-    num_slow_map_instances = int(self.request.get('num_slow_map_instances'))
-    slow_map_instance_tag = self.request.get('slow_map_instance_tag')
-    slow_map_instances = self._get_instance_list(
-        gce_project, num_slow_map_instances, slow_map_instance_tag, custom_image)
-    num_fast_map_instances = int(self.request.get('num_fast_map_instances'))
-    fast_map_instance_tag = self.request.get('fast_map_instance_tag')
-    fast_map_instances = self._get_instance_list(
-        gce_project, num_fast_map_instances, fast_map_instance_tag, custom_image)
-    instances = slow_map_instances + fast_map_instances
+    num_instances = int(self.request.get('num_instances'))
+    instances = self._get_instance_list(
+        gce_project, num_instances, custom_image)
 
     gce_appengine.GceAppEngine().run_gce_request(
         self,
@@ -167,20 +186,39 @@ class Instance(webapp2.RequestHandler):
     Args:
       gce_project: An isntance of gce.GceProject
     """
-    images = gce_project.list_images(filter='name eq ^%s$' % IMAGE)
+    images = gce_project.list_images(filter='name eq ^%s-$' % IMAGE)
     return bool(images)
 
-  def _get_instance_list(self, gce_project, num_instances, tag, custom_image):
+  def _get_instance_metadata(self):
+    """The metadata values to pass into the instance."""
+    inline_values = {
+      'goargs': GO_ARGS,
+    }
+
+    file_values = {
+      'startup-script': STARTUP_SCRIPT,
+      'goprog': GO_PROGRAM,
+    }
+
+    metadata = []
+    for k, v in inline_values.items():
+      metadata.append({'key': k, 'value': v})
+
+    for k, fv in file_values.items():
+      v = open(fv, 'r').read()
+      metadata.append({'key': k, 'value': v})
+    return metadata
+
+  def _get_instance_list(self, gce_project, num_instances, custom_image):
     """Get a list of instances to start.
 
     Args:
       gce_project: An instance of gce.GceProject.
       num_instances: The number of instances to start.
-      tag: A string tag to prepend to the instance name.
       custom_image: boolean if we should use a custom image
 
     Returns:
-      A list of gcelib.Instances.
+      A list of gce.Instances.
     """
 
     image_name = None
@@ -192,21 +230,37 @@ class Instance(webapp2.RequestHandler):
     instance_list = []
     for i in range(num_instances):
       instance = gce.Instance(
-          name='%s-%d' % (tag, i),
+          name='%s-%02d' % (self.InstancePrefix(), i),
+          machine_type_name=MACHINE_TYPE,
           image_name=image_name,
           image_project_id=image_project_id,
           tags=[DEMO_NAME],
-          metadata=[{
-              'key': 'startup-script',
-              'value': open(STARTUP_SCRIPT, 'r').read()}],
+          metadata=self._get_instance_metadata(),
           service_accounts=gce_project.settings['cloud_service_account'])
       instance_list.append(instance)
     return instance_list
+
+
+class Cleanup(RequestHandler):
+  """Stop instances."""
+
+  @oauth_decorator.oauth_required
+  @data_handler.data_required
+  def post(self):
+    """Stop instances using the gce_appengine helper class."""
+    gce_project_id = data_handler.stored_user_data[user_data.GCE_PROJECT_ID]
+    gce_zone_name = data_handler.stored_user_data[user_data.GCE_ZONE_NAME]
+    gce_project = gce.GceProject(oauth_decorator.credentials,
+                                 project_id=gce_project_id,
+                                 zone_name=gce_zone_name)
+    gce_appengine.GceAppEngine().delete_demo_instances(
+        self, gce_project, self.InstancePrefix())
 
 
 app = webapp2.WSGIApplication(
     [
         ('/%s' % DEMO_NAME, Fractal),
         ('/%s/instance' % DEMO_NAME, Instance),
+        ('/%s/cleanup' % DEMO_NAME, Cleanup),
         (data_handler.url_path, data_handler.data_handler),
     ], debug=True)

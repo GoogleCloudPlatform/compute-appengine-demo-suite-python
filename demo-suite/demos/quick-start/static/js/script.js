@@ -31,21 +31,20 @@ QuickStart.prototype.initialize = function() {
     }
   });
 
-  var counter = new Counter(document.getElementById('counter'));
-  var timer = new Timer(document.getElementById('timer'));
-  this.initializeButtons_(gce, counter, timer);
+  this.counter_ = new Counter(document.getElementById('counter'), 'numRunning');
+  this.timer_ = new Timer(document.getElementById('timer'));
+  this.initializeButtons_(gce);
 };
 
 /**
  * Initialize UI controls.
  * @param {Object} gce Instance of Gce class.
- * @param {Object} counter Instance of the Counter class.
- * @param {Object} timer Instance of the Timer class.
  * @private
  */
-QuickStart.prototype.initializeButtons_ = function(gce, counter, timer) {
+QuickStart.prototype.initializeButtons_ = function(gce) {
   $('.btn').button();
 
+  var that = this;
   $('#start').click(function() {
     $('#start').addClass('disabled');
 
@@ -70,10 +69,11 @@ QuickStart.prototype.initializeButtons_ = function(gce, counter, timer) {
         document.getElementById('instances'), instanceNames, {
           drawOnStart: true
         });
+    that.counter_.targetMetric = 'numRunning';
     gce.setOptions({
       squares: squares,
-      counter: counter,
-      timer: timer
+      counter: that.counter_,
+      timer: that.timer_
     });
     gce.startInstances(numInstances, {
       data: {'num_instances': numInstances},
@@ -85,6 +85,7 @@ QuickStart.prototype.initializeButtons_ = function(gce, counter, timer) {
 
   // Initialize reset button click event to stop instances.
   $('#reset').click(function() {
+    that.counter_.targetMetric = 'numAlive';
     gce.stopInstances(function() {
       $('#start').removeClass('disabled');
       $('#reset').addClass('disabled');

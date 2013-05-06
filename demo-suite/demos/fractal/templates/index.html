@@ -1,16 +1,17 @@
 {% extends "templates/base.html" %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="/{{ tag }}/css/style.css">
+<link rel="stylesheet" href="/{{ demo_name }}/css/style.css">
 {% endblock %}
 
 {% block extra_javascript %}
 <script type="text/javascript">
-  var TAG = '{{ tag }}';
+  var DEMO_NAME = '{{ demo_name }}';
 </script>
 <script type="text/javascript" src="/js/gce.js"></script>
+<script type="text/javascript" src="/js/squares.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
-<script type="text/javascript" src="/{{ tag }}/js/script.js"></script>
+<script type="text/javascript" src="/{{ demo_name }}/js/script.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -24,5 +25,16 @@
   tiles than the one on the right.
 </p>
 
-<div id="maps"></div>
+<p>
+  <div>
+    <a class="btn" id="start">Start</a>
+    <a class="btn" id="reset">Reset</a>
+    <span id="spinner"><i class="icon-spinner icon-spin icon-2x"></i></span>
+  </div>
+</p>
+
+<div class="row">
+  <div class="span6" id="fractal1"></div>
+  <div class="span6" id="fractal16"></div>
+</div>
 {% endblock %}

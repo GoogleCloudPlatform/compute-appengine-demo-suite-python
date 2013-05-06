@@ -68,7 +68,7 @@ class GceAppEngine(object):
         request_handler,
         gce_project.list_instances,
         'Error listing instances: ',
-        filter='name eq ^%s.*' % demo_name,
+        filter='name eq ^%s-.*' % demo_name,
         maxResults=MAX_RESULTS)
 
     if instances:

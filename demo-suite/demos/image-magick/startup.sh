@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -o xtrace
+
 IMAGE_VERSION=1
 IMAGE_MARK=/var/image-magick.image.$IMAGE_VERSION
 if [ ! -e $IMAGE_MARK ];

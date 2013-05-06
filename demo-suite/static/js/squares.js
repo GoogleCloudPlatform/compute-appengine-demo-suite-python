@@ -40,64 +40,83 @@
  * @param {Object} squareOptions Options for the square (optional).
  */
 var Squares = function(container, instanceNames, squareOptions) {
-  this.container_ = container;
+  /**
+   * Container for the squares.
+   * @type {JQuery}
+   * @private
+   */
+  this.container_ = $(container);
+
+  /**
+   * The number of columns in the UI display.
+   * @type {number}
+   * @private
+   */
+  this.numCols_ = null;
+
+  /**
+   * The default status colors. These are just classNames and can be customized
+   * using the squareOptions object during initialization.
+   * @type {Object}
+   * @private
+   */
+  this.statusClasses_ = null;
+
+  /**
+   * The string of instance names.
+   * @type {Array.<string>}
+   * @private
+   */
   this.instanceNames_ = instanceNames;
+
+  /**
+   * If drawOnStart is true, this variable is set equal to the this.drawSquares
+   * function. When a Square object is passed as a UI option to the Gce class,
+   * the Gce class will call the start method in the startInstances function.
+   * @type {Function}
+   */
+  this.start = null;
+
+  /**
+   * A map from the instance name to the JQuery object representing that
+   *    instance.
+   * @type {Object}
+   * @private
+   */
+  this.squares_ = {};
+
   if (squareOptions.statusClasses) {
     this.statusClasses_ = squareOptions.statusClasses;
   } else {
     this.statusClasses_ = {
-      'OTHER': 'grey',
-      'TERMINATED': 'grey',
-      'STOPPING': 'orange',
-      'PROVISIONING': 'orange',
-      'STAGING': 'yellow',
-      'RUNNING': 'green'
+      'OTHER': 'status-other',
+      'TERMINATED': 'status-terminated',
+      'PROVISIONING': 'status-provisioning',
+      'STAGING': 'status-staging',
+      'RUNNING': 'status-running',
+      'SERVING': 'status-serving',
+      'STOPPING': 'status-stopping',
+      'STOPPED': 'status-stopped',
     };
   }
   if (squareOptions.drawOnStart) {
     this.start = this.drawSquares;
   }
+
+  // If the num of cols is not set, create up to 25 cols based on the
+  // number of instances.
   if (squareOptions.cols) {
-    this.cols_ = squareOptions.cols;
+    this.numCols_ = squareOptions.cols;
+  }
+  var numInstances = this.instanceNames_.length;
+  if (!this.numCols_) {
+    this.numCols_ = Math.ceil(Math.sqrt(numInstances));
+    if (this.numCols_ > 25) {
+      this.numCols_ = 25;
+    }
   }
 };
 
-/**
- * Container for the squares.
- * @type {Element}
- * @private
- */
-Squares.prototype.container_ = null;
-
-/**
- * The number of columns in the UI display.
- * @type {number}
- * @private
- */
-Squares.prototype.cols_ = null;
-
-/**
- * The default status colors. These are just classNames and can be customized
- * using the squareOptions object during initialization.
- * @type {Object}
- * @private
- */
-Squares.prototype.statusClasses_ = null;
-
-/**
- * The string of instance names.
- * @type {Array.<string>}
- * @private
- */
-Squares.prototype.instanceNames_ = null;
-
-/**
- * If drawOnStart is true, this variable is set equal to the this.drawSquares
- * function. When a Square object is passed as a UI option to the Gce class,
- * the Gce class will call the start method in the startInstances function.
- * @type {Function}
- */
-Squares.prototype.start = null;
 
 /**
  * Draws the squares on the HTML page.
@@ -106,33 +125,25 @@ Squares.prototype.drawSquares = function() {
   // First, clean up any old instace squares.
   this.reset();
 
-  // If the num of cols is not set, create up to 25 cols based on the
-  // number of instances.
-  var numInstances = this.instanceNames_.length;
-  if (!this.cols_) {
-    this.cols_ = Math.ceil(Math.sqrt(numInstances));
-    if (this.cols_ > 25) {
-      this.cols_ = 25;
-    }
-  }
-
   // Add the columns.
-  for (var i = 0; i < this.cols_; i++) {
-    var col = document.createElement('div');
-    col.className = 'span1';
-    col.id = 'col-' + i;
-    this.container_.appendChild(col);
+  var columns = [];
+  for (var i = 0; i < this.numCols_; i++) {
+    var col = $('<div>').addClass('span1');
+    this.container_.append(col);
+    columns.push(col);
   }
 
   // Add the color squares.
   for (var i = 0; i < this.instanceNames_.length; i++) {
     // TAG is defined in the html file as a template variable
     var instanceName = this.instanceNames_[i];
-    var color = document.createElement('div');
-    color.className = 'color-block ' + this.statusClasses_['OTHER'];
-    color.id = instanceName;
-    var columnNum = i % this.cols_;
-    $('#col-' + columnNum).append(color);
+    square = $('<div>')
+      .addClass('color-block')
+      .addClass(this.statusClasses_['OTHER'])
+      .append('<i class="icon-ok icon-2x"></i>');
+    var columnNum = i % this.numCols_;
+    columns[columnNum].append(square);
+    this.squares_[instanceName] = square;
   }
 };
 
@@ -145,18 +156,17 @@ Squares.prototype.update = function(updateData) {
   var data = updateData['data'];
   for (var i = 0; i < this.instanceNames_.length; i++) {
     var instanceName = this.instanceNames_[i];
-    var color = null;
+    var statusClass = null;
     if (data.hasOwnProperty(instanceName)) {
       var status = data[instanceName]['status'];
-      color = this.statusClasses_[status];
-      if (!color) {
-        color = this.statusClasses_['OTHER'];
+      statusClass = this.statusClasses_[status];
+      if (!statusClass) {
+        statusClass = this.statusClasses_['OTHER'];
       }
     } else {
-      color = this.statusClasses_['TERMINATED'];
+      statusClass = this.statusClasses_['TERMINATED'];
     }
-    var jqueryId = '#' + instanceName;
-    this.colorize(jqueryId, color);
+    this.setStatusClass(instanceName, statusClass);
   }
 };
 
@@ -164,17 +174,29 @@ Squares.prototype.update = function(updateData) {
  * Reset the squares.
  */
 Squares.prototype.reset = function() {
-  $(this.container_).empty();
+  this.container_.empty();
+  this.squares_ = {};
 };
 
 /**
  * Colors the HTML element with the given color / class and jquery id.
- * @param {String} jqueryId JQuery ID of element to be updated.
+ * @param {String} instanceName The name of the instance.
  * @param {String} color Class name to update.
  */
-Squares.prototype.colorize = function(jqueryId, color) {
+Squares.prototype.setStatusClass = function(instanceName, color) {
+  square = this.squares_[instanceName];
   for (var status in this.statusClasses_) {
-    $(jqueryId).removeClass(this.statusClasses_[status]);
+    square.removeClass(this.statusClasses_[status]);
   }
-  $(jqueryId).addClass(color);
+  square.addClass(color);
+};
+
+/**
+ * Get the div for an instance.
+ * @param  {string} instanceName The instance.
+ * @return {JQuery}              A JQuery object wrapping the div that
+ *    represents instanceName.
+ */
+Squares.prototype.getSquareDiv = function(instanceName) {
+  return this.squares_[instanceName];
 };

@@ -8,31 +8,57 @@ h1 {
 
 .span1 {
   margin-left: 0px;
-  width: 32px;
+  width: 33px;
 }
 
 .color-block {
-  height: 30px;
-  width: 30px;
-  margin: 3px 5px 0 0;
+  height: 28px;
+  width: 28px;
+  margin: 3px 3px 0 0;
+  border: 1px solid black;
+  line-height: 0px;
 }
 
-.red {
-  background-color: red;
+.color-block [class^="icon-"],
+.color-block [class*=" icon-"] {
+  vertical-align: middle;
+  color: white;
+  visibility: hidden;
 }
 
-.orange {
-  background-color: #FF8C00;
+.status-other {
+  background-color: #666666; // Gray
 }
 
-.yellow {
-  background-color: #FFD700;
+.status-terminated {
+  background-color: #666666; // Gray
 }
 
-.green {
-  background-color: green;
+.status-provisioning {
+  background-color: #3369E8; // Blue
 }
 
-.grey {
-  background-color: #999999;
+.status-staging {
+  background-color: #EEB211; // Yellow
+}
+
+.status-running {
+  background-color: #009925; // Green
+}
+
+.status-serving {
+  background-color: #009925; // Green
+}
+
+.status-stopping {
+  background-color: #D50F25; // Red
+}
+
+.status-stopped {
+  background-color: #D50F25; // Red
+}
+
+.status-serving [class^="icon-"],
+.status-serving [class*=" icon-"] {
+  visibility: visible;
 }

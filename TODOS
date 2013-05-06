@@ -3,11 +3,6 @@ A list of project to-dos:
 - Easier customization of app engine and compute engine project information
   to allow for out-of-the-box deployment of the demos.
 
-- Better map zooming - currently, the left map controls both maps. Both maps
-  should have the same control.
-
-- Add mandelbrot source code to fractal demo.
-
 - Quick start demo:
 
   - Make sure the user can't start more instances that what are available.

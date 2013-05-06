@@ -1,4 +1,4 @@
-/**
+ /**
  * @fileoverview Image Magick demo JavaScript code.
  *
  * Displays status of instances in colored blocks, then displays processed
@@ -36,13 +36,6 @@ ImageMagick.prototype.IMAGE_INTERVAL_TIME_ = 2000;
  * @private
  */
 ImageMagick.prototype.NUM_INSTANCES_ = 50;
-
-/**
- * A class to display for the status color blocks before displaying the images.
- * @type {string}
- * @private
- */
-ImageMagick.prototype.WHITE_ = 'white';
 
 /**
  * The Cloud Storage URL where image output is saved.
@@ -156,14 +149,13 @@ ImageMagick.prototype.displayImages_ = function(squares) {
         if (DIRECTORY) {
           instanceName = instanceName.replace(DIRECTORY + '/', '');
         }
-        var jqueryId = '#' + instanceName;
 
         // If the image hasn't been added, add it.
-        if ($(jqueryId).children().length < 1) {
-          squares.colorize(jqueryId, that.WHITE_);
-          var image = document.createElement('img');
-          image.src = that.CS_URL_ + '/' + imagePath;
-          $(jqueryId).append(image);
+        square = squares.getSquareDiv(instanceName);
+        if (square.find('img').length < 1) {
+          square.empty();
+          img = $('<img>').attr('src', that.CS_URL_ + '/' + imagePath);
+          square.append(img);
         }
 
         imageCount++;

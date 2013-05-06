@@ -115,6 +115,9 @@ class Instance(webapp2.RequestHandler):
     else:
       gcs_path = gcs_bucket
 
+    # Figure out the image.  Use custom image if it exists.
+    (image_project, image_name) = self._get_image_name(gce_project)
+
     # Create a list of instances to insert.
     instances = []
     num_instances = int(self.request.get('num_instances'))
@@ -122,8 +125,8 @@ class Instance(webapp2.RequestHandler):
       startup_script = os.path.join(os.path.dirname(__file__), 'startup.sh')
       instances.append(gce.Instance(
           name='%s-%d' % (DEMO_NAME, i),
-          image_name=IMAGE,
-          image_project_id=gce_project_id,
+          image_project_id=image_project,
+          image_name=image_name,
           service_accounts=gce_project.settings['cloud_service_account'],
           metadata=[
               {'key': 'startup-script', 'value': open(
@@ -143,6 +146,19 @@ class Instance(webapp2.RequestHandler):
     if response:
       self.response.headers['Content-Type'] = 'text/plain'
       self.response.out.write('starting cluster')
+
+  def _get_image_name(self, gce_project):
+    """Finds the appropriate image to use.
+
+    Args:
+      gce_project: An instance of gce.GceProject
+
+    Returns:
+      A tuple containing the image project and image name.
+    """
+    if gce_project.list_images(filter='name eq ^%s-$' % IMAGE):
+      return (gce_project.project_id, IMAGE)
+    return ('google', None)
 
 
 class GceCleanup(webapp2.RequestHandler):

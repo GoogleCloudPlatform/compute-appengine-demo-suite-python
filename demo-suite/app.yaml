@@ -16,11 +16,11 @@ handlers:
 - url: /js
   static_dir: static/js
 
-- url: /bootstrap/js
-  static_dir: static/bootstrap/js
+- url: /bootstrap
+  static_dir: static/bootstrap
 
-- url: /bootstrap/css
-  static_dir: static/bootstrap/css
+- url: /fontawesome
+  static_dir: static/fontawesome
 
 - url: /oauth2callback.*
   script: main.app
