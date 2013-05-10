@@ -149,14 +149,32 @@ var Fractal = function(container, tag, num_instances, slave_fractal) {
  * @type {number}
  * @private
  */
-Fractal.prototype.LATITUDE_ = 1.75;
+Fractal.prototype.LATITUDE_ = -78.35;
 
 /**
  * The map center longitude.
  * @type {number}
  * @private
  */
-Fractal.prototype.LONGITUDE_ = 15;
+Fractal.prototype.LONGITUDE_ = 157.5;
+
+/**
+ * The default tile size
+ * @type {Number}
+ */
+Fractal.prototype.TILE_SIZE_ = 256;
+
+/**
+ * The minimum zoom on the map
+ * @type {Number}
+ */
+Fractal.prototype.MIN_ZOOM_ = 0;
+
+/**
+ * The maximum zoom of the map.
+ * @type {Number}
+ */
+Fractal.prototype.MAX_ZOOM_ = 30;
 
 /**
  * Initialize the UI and check if there are instances already up.
@@ -258,44 +276,46 @@ Fractal.prototype.stopMap_ = function() {
 Fractal.prototype.mapIt_ = function(data) {
   this.stopMap_();
   var ips = this.getIps_(data);
-  this.map = this.prepMap_(ips, 25, 1, 256);
+  this.map = this.prepMap_(ips);
   this.addListeners_();
 };
 
 /**
  * Set map options and draw a map on HTML page.
  * @param {Array.<string>} ips An array of IPs.
- * @param {maxZoom} maxZoom The maximum zoom of the map.
- * @param {minZoom} minZoom The minimum zoom of the map.
- * @param {tileSize} tileSize The size of the tiles on the map.
  * @return {google.maps.Map} Returns the map object.
  * @private
  */
-Fractal.prototype.prepMap_ = function(ips, maxZoom, minZoom, tileSize) {
+Fractal.prototype.prepMap_ = function(ips) {
   var numInstances = ips.length;
 
+  var that = this;
   var fractalTypeOptions = {
     getTileUrl: function(coord, zoom) {
       var url = ['http://'];
-      if (ips.length > 1) {
+//      if (ips.length > 1) {
+      if (false) {
         var instanceIdx = Math.abs(coord.x + (4 * coord.y)) % numInstances;
         // var instanceIdx = Math.abs(Math.round(coord.x * Math.sqrt(numInstances) + coord.y)) % numInstances;
         url.push(ips[instanceIdx]);
       } else {
         url.push(ips[0]);
       }
-      url.push('/tile?z=');
-      url.push(zoom);
-      url.push('&x=');
-      url.push(coord.x);
-      url.push('&y=');
-      url.push(coord.y);
+      var params = {
+        z: zoom,
+        x: coord.x,
+        y: coord.y,
+        'tile-size': that.TILE_SIZE_,
+      };
+      url.push('/tile?');
+      url.push($.param(params));
+
       return url.join('');
     },
-    tileSize: new google.maps.Size(tileSize, tileSize),
-    maxZoom: maxZoom,
-    minZoom: minZoom,
-    name: 'Fractal' + numInstances
+    tileSize: new google.maps.Size(this.TILE_SIZE_, this.TILE_SIZE_),
+    maxZoom: this.MAX_ZOOM_,
+    minZoom: this.MIN_ZOOM_,
+    name: 'Mandelbrot',
   };
 
   this.mapContainer_ = $('<div>');
@@ -303,7 +323,7 @@ Fractal.prototype.prepMap_ = function(ips, maxZoom, minZoom, tileSize) {
   this.mapContainer_.addClass('map-container');
   $(this.container_).find('.map-row').append(this.mapContainer_);
   var map = this.drawMap_(this.mapContainer_,
-      fractalTypeOptions, 'fractal' + numInstances);
+      fractalTypeOptions, 'Mandelbrot');
   return map;
 };
 
@@ -359,7 +379,7 @@ Fractal.prototype.drawMap_ = function(canvas, fractalTypeOptions, mapTypeId) {
 
   var mapOptions = {
     center: new google.maps.LatLng(this.LATITUDE_, this.LONGITUDE_),
-    zoom: 1,
+    zoom: this.MIN_ZOOM_,
     streetViewControl: false,
     mapTypeControlOptions: {
       mapTypeIds: [mapTypeId]
