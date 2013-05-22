@@ -16,6 +16,7 @@ package main
 
 import (
 	"bytes"
+	"expvar"
 	"flag"
 	"fmt"
 	"image"
@@ -43,10 +44,25 @@ var (
 	tileServers        []string
 )
 
+// Publish the host that this data was collected from
+var hostnameVar = expvar.NewString("hostname")
+
+// A Map of URL path -> request count
+var requestCounts = expvar.NewMap("requestCounts")
+
+// A Map of URL path -> total request time in microseconds
+var requestTime = expvar.NewMap("requestTime")
+
+// A Map of 'size' -> request count
+var tileCount = expvar.NewMap("tileCount")
+
+// A Map of 'size' -> total time in microseconds
+var tileTime = expvar.NewMap("tileTime")
+
 const (
 	// The number of iterations of the Mandelbrot calculation.
 	// More iterations mean higher quality at the cost of more CPU time.
-	iterations = 4000
+	iterations = 1000
 
 	// The size of an edge of the tile by default
 	defaultTileSize = 256
@@ -65,13 +81,34 @@ const (
 	// transitions between color stops.
 	colorRampEase = 2
 
+	// How much to oversample when generating pixels.  The number of values
+	// calculated per pixel will be this value squared.
+	pixelOversample = 3
+
 	// The final tile size that actually gets rendered
-	leafTileSize = 128
+	leafTileSize = 32
 
 	enableDebugLog = false
 )
 
-func initLogger() {
+// A simple expvar.Var that outputs the time, in seconds, that this server has
+// been running.
+type UptimeVar struct {
+	StartTime time.Time
+}
+
+func (v *UptimeVar) String() string {
+	return strconv.FormatFloat(time.Since(v.StartTime).Seconds(), 'f', 2, 64)
+}
+
+func init() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	hostname, _ := os.Hostname()
+	hostnameVar.Set(hostname)
+
+	expvar.Publish("uptime", &UptimeVar{time.Now()})
+
 	if enableDebugLog {
 		debugLog = log.New(os.Stderr, "DEBUG ", log.LstdFlags)
 
@@ -79,11 +116,11 @@ func initLogger() {
 		null, _ := os.Open(os.DevNull)
 		debugLog = log.New(null, "", 0)
 	}
-}
 
-func initMath() {
 	minValue = math.MaxFloat64
 	maxValue = 0
+
+	initColors()
 }
 
 func isPowerOf2(num int) bool {
@@ -142,9 +179,9 @@ func initColors() {
 		numStopsLeft--
 	}
 
-	// for _, c := range colors {
-	// 	debugLog.Printf("%v", c)
-	// }
+	for _, c := range colors {
+		debugLog.Printf("%v", c)
+	}
 }
 
 func tileHandler(w http.ResponseWriter, r *http.Request) {
@@ -162,6 +199,9 @@ func tileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	t0 := time.Now()
+	tileCount.Add(strconv.Itoa(tileSize), 1)
+
 	var b []byte
 	if tileSize > leafTileSize && len(tileServers) > 0 {
 		b = downloadAndCompositeTiles(x, y, z, tileSize)
@@ -171,6 +211,8 @@ func tileHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/png")
 	w.Header().Set("Content-Length", strconv.Itoa(len(b)))
 	w.Write(b)
+
+	tileTime.Add(strconv.Itoa(tileSize), time.Since(t0).Nanoseconds())
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -191,6 +233,30 @@ func quitHandler(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(500 * time.Millisecond)
 		os.Exit(1)
 	}()
+}
+
+func resetVarMap(varMap *expvar.Map) {
+	// There is no easy way to delete/clear expvar.Map.  As such there is a slight
+	// race here.  *sigh*
+	keys := []string{}
+	varMap.Do(func(kv expvar.KeyValue) {
+		keys = append(keys, kv.Key)
+	})
+
+	for _, key := range keys {
+		varMap.Set(key, new(expvar.Int))
+	}
+}
+
+func varResetHandler(w http.ResponseWriter, r *http.Request) {
+	resetVarMap(requestCounts)
+	resetVarMap(requestTime)
+	resetVarMap(tileCount)
+	resetVarMap(tileTime)
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	fmt.Fprintln(w, "ok")
 }
 
 func downloadAndCompositeTiles(x, y, z, tileSize int) []byte {
@@ -304,16 +370,42 @@ func renderImage(x, y, z, tileSize int) []byte {
 	// tileX and tileY is the absolute position of this tile at the current zoom
 	// level.
 	numTiles := int(1 << uint(z))
-	tileX, tileY := x*tileSize, y*tileSize
-	scale := 1 / float64(numTiles*baseZoomSize)
+	oversampleTileSize := tileSize * pixelOversample
+	tileXOrigin, tileYOrigin := x*tileSize*pixelOversample, y*tileSize*pixelOversample
+	scale := 1 / float64(numTiles*baseZoomSize*pixelOversample)
 
-	debugLog.Printf("Rendering Tile x: %v y: %v z: %v tileSize: %v tileX: %v tileY: %v scale: %v", x, y, z, tileSize, tileX, tileY, scale)
+	debugLog.Printf("Rendering Tile x: %v y: %v z: %v tileSize: %v ", x, y, z, tileSize)
 
+	numPixels := 0
 	img := image.NewRGBA(image.Rect(0, 0, tileSize, tileSize))
-	for i := 0; i < tileSize; i++ {
-		for j := 0; j < tileSize; j++ {
-			c := complex(float64(tileX+i)*scale, float64(tileY+j)*scale)
-			img.SetRGBA(i, j, mandelbrotColor(c, z))
+	for tileX := 0; tileX < oversampleTileSize; tileX += pixelOversample {
+		for tileY := 0; tileY < oversampleTileSize; tileY += pixelOversample {
+			var r, g, b int32
+			for dX := 0; dX < pixelOversample; dX++ {
+				for dY := 0; dY < pixelOversample; dY++ {
+					c := complex(float64(tileXOrigin+tileX+dX)*scale,
+						float64(tileYOrigin+tileY+dY)*scale)
+					// log.Println(c)
+					clr := mandelbrotColor(c, z)
+					r += int32(clr.R)
+					g += int32(clr.G)
+					b += int32(clr.B)
+				}
+			}
+			img.SetRGBA(
+				tileX/pixelOversample,
+				tileY/pixelOversample,
+				color.RGBA{
+					uint8(r / (pixelOversample * pixelOversample)),
+					uint8(g / (pixelOversample * pixelOversample)),
+					uint8(b / (pixelOversample * pixelOversample)),
+					0xFF})
+
+			// Every 100 pixels yield the goroutine so other stuff can make progress.
+			numPixels++
+			if numPixels%100 == 0 {
+				runtime.Gosched()
+			}
 		}
 	}
 
@@ -328,15 +420,25 @@ func renderImage(x, y, z, tileSize int) []byte {
 	return buf.Bytes()
 }
 
+// A Request object that collects timing information of all intercepted requests as they
+// come in and publishes them to exported vars.
+type RequestStatInterceptor struct {
+	NextHandler http.Handler
+}
+
+func (stats *RequestStatInterceptor) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	requestCounts.Add(req.URL.Path, 1)
+	t0 := time.Now()
+	stats.NextHandler.ServeHTTP(w, req)
+	requestTime.Add(req.URL.Path, time.Since(t0).Nanoseconds())
+}
+
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	initLogger()
-	initColors()
-	initMath()
 
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/tile", tileHandler)
-	http.HandleFunc("/debug/quitquitquit", quitHandler)
+	http.HandleFunc("/debug/quit", quitHandler)
+	http.HandleFunc("/debug/vars/reset", varResetHandler)
 
 	// Support opening multiple ports so that we aren't bound by HTTP connection
 	// limits in browsers.
@@ -359,11 +461,13 @@ func main() {
 	tileServers = tileServers[:di]
 	log.Printf("Tile Servers: %q", tileServers)
 
+	handler := &RequestStatInterceptor{http.DefaultServeMux}
+
 	for i := 0; i < *numPorts; i++ {
 		portSpec := fmt.Sprintf("0.0.0.0:%v", *portBase+i)
 		go func() {
 			log.Println("Listening on", portSpec)
-			err := http.ListenAndServe(portSpec, nil)
+			err := http.ListenAndServe(portSpec, handler)
 			if err != nil {
 				log.Fatal("ListenAndServe: ", err)
 			}

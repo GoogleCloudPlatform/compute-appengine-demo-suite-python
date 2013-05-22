@@ -3,6 +3,7 @@
     "compute": {
         "api_version": "v1beta14",
         "image": "gcel-12-04-v20130104",
+        "kernel": "https://www.googleapis.com/compute/v1beta14/projects/google/global/kernels/gce-v20130515",
         "machine_type": "n1-standard-1",
         "zone": "us-central2-a",
         "network": "default",

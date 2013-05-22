@@ -16,8 +16,9 @@
 
 __author__ = 'kbrisbin@google.com (Kathryn Hurley)'
 
-import logging
 import json
+import logging
+import threading
 
 import jinja2
 import webapp2
@@ -147,6 +148,14 @@ class UserData(db.Model):
 class DataHandler(object):
   """Store user data in database."""
 
+  def set_stored_user_data(self, stored_user_data):
+    self._tls.stored_user_data = stored_user_data
+
+  def get_stored_user_data(self):
+     return self._tls.stored_user_data
+
+  stored_user_data = property(get_stored_user_data, set_stored_user_data)
+
   def __init__(self, demo_name, parameters, redirect_uri=None):
     """Initializes the DataHandler class.
 
@@ -167,6 +176,7 @@ class DataHandler(object):
       redirect_uri: The string URL to redirect to after a successful POST
           to store data in the database. Defaults to /<demo-name> if None.
     """
+    self._tls = threading.local()
     self._demo_name = demo_name
     self._parameters = parameters
     if redirect_uri:
@@ -223,7 +233,10 @@ class DataHandler(object):
           if not (user_data and user_data.user_data.get(parameter['name'])):
             return webapp2.redirect(self.url_path)
 
-      return method(request_handler, *args, **kwargs)
+      try:
+        return method(request_handler, *args, **kwargs)
+      finally:
+        self.stored_user_data = {}
 
     return check_data
 

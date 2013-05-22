@@ -13,17 +13,20 @@
   // See http://code.google.com/apis/maps/documentation/javascript/maptypes.html#ImageMapTypes
   var mbTypeOptions = {
     getTileUrl: function(coord, zoom) {
-      var numAddresses = 1
-      var addressIndex = Math.abs(Math.round(coord.x * Math.sqrt(numAddresses) + coord.y)) % numAddresses;
       var tileSize = 256
+      var numAddresses = 4
+      var addressIndex = Math.abs(Math.round(coord.x * Math.sqrt(numAddresses) + coord.y)) % numAddresses;
+
       port = 8900+addressIndex
+      host = 'http://localhost:' + port
+
       var params = {
         z: zoom,
         x: coord.x,
         y: coord.y,
         'tile-size': tileSize,
       }
-      url = 'http://localhost:' + port + '/tile?' + $.param(params)
+      url = host + '/tile?' + $.param(params)
       return url;
     },
     tileSize: new google.maps.Size(256, 256),

@@ -28,7 +28,7 @@ instructions.
        "client_id": "24043....apps.googleusercontent.com",
        "client_secret": "iPVXC5...xVz",
        "redirect_uris": ["http://localhost:8080/oauth2callback",
-                         "http://<your-app-id>.appspot.com/oauth2callback"],
+                         "http://&lt;your-app-id&gt;.appspot.com/oauth2callback"],
        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
        "token_uri": "https://accounts.google.com/o/oauth2/token"
      }
@@ -40,36 +40,10 @@ instructions.
    More information about client secrets can be found in the
    [API client library documentation][3].
 
-3. [Fractal Demo] The Fractal demo requires addition of a Service email
-   account to your project team members. The Service email account is of the
-   format
-
-        your-app-id@appspot.gserviceaccount.com
-
-   Add this to your list of team members in the API console under the Team
-   section.
-
-   More information about Service accounts can be found in the
-   [API client library documentation][4].
-
-4. [Fractal Demo] The Fractal demo also requires 2 files to be stored on
-   [Cloud Storage][5]. Create a bucket on Cloud Storage and upload the
-   `image_handler.py` and `mandelbrot.jar` files found in `demos/fractal/vm_files`
-   to that bucket. Change the path to the files in the Fractal Demo's
-   `startup.sh` file to point to your Cloud Storage files.
-
-5. [Fractal Demo] Update the project value in the settings.json file with your
-   own project id:
-
-        "project": "your-project-id",
-
-   Information on how to get your Compute Engine project ID can be found
-   in the [Compute Engine documentation][6].
-
-6. (optional) Update any of the other defaults in the settings.json to
+3. (optional) Update any of the defaults in the settings.json to
    match your preferences.
 
-7. (optional) You can optionally create custom images for the Fractal and
+4. (optional) You can optionally create custom images for the Fractal and
    Image Magick demos that will allow the instances to start quicker. First,
    start the instances using the demo UI. When at least one of the instances
    is up and running, ssh into that instance and follow the directions
@@ -78,7 +52,7 @@ instructions.
    Name the images `fractal-demo-image` and `image-magick-demo-image`
    respectively.
 
-8. Install dependencies listed in the dependencies section into the `ext_lib`
+5. Install dependencies listed in the dependencies section into the `ext_lib`
    directory. You can do this easily by executing the
    `download_dependencies.sh` bash script. Beware that this will delete all
    current contents of the `ext_lib` dir and download the dependencies fresh.
@@ -97,6 +71,16 @@ When adding new dependencies do the following:
 1. Add them to the list here
 2. Add them to the `download_dependencies.sh` script.
 3. Add them to `demo-suite/lib_path.py`
+
+## Fractal Demo
+
+### Load Balancing
+The fractal demo can use load balancing.  However, the feature is in preview and the API is under active development.  As such, there are some pieces missing that will be filled in as the feature reaches maturity.
+
+If load balancing **is** set up, it will work to forward all connections to an IP address to a set of VMs with a specific tag (fractal-cluster).  Currently, the projects that support this are hard coded in the `demo-suite/demos/fractal/main.py` along with the IP/hostnames for the load balancer.
+
+### Boot from PD
+If you initialize a set of boot PDs, they will be detected and used instead of booting from scratch disks.  Do do this run the `demo-suite/demos/fractal/createpds.sh` script.  You'll have to update it to point to your project.
 
 
 [1]: http://gce-demos.appspot.com

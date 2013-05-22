@@ -23,8 +23,8 @@ QuickStart.prototype.initialize = function() {
   var gce = new Gce('/' + DEMO_NAME + '/instance',
       '/' + DEMO_NAME + '/instance',
       '/' + DEMO_NAME + '/cleanup');
-  gce.checkIfAlive(function(data, numAlive) {
-    if (numAlive != 0) {
+  gce.getInstanceStates(function(data) {
+    if (data['stateCount']['TOTAL'] != 0) {
       $('#start').addClass('disabled');
       $('#reset').removeClass('disabled');
       alert('Some instances are already running! Hit reset.');
@@ -69,7 +69,7 @@ QuickStart.prototype.initializeButtons_ = function(gce) {
         document.getElementById('instances'), instanceNames, {
           drawOnStart: true
         });
-    that.counter_.targetMetric = 'numRunning';
+    that.counter_.targetState = 'RUNNING';
     gce.setOptions({
       squares: squares,
       counter: that.counter_,
@@ -85,7 +85,7 @@ QuickStart.prototype.initializeButtons_ = function(gce) {
 
   // Initialize reset button click event to stop instances.
   $('#reset').click(function() {
-    that.counter_.targetMetric = 'numAlive';
+    that.counter_.targetState = 'TOTAL';
     gce.stopInstances(function() {
       $('#start').removeClass('disabled');
       $('#reset').addClass('disabled');

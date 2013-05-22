@@ -38,3 +38,57 @@ padNumber = function(num, length) {
   index = s.length;
   return stringRepeat('0', Math.max(0, length - index)) + s;
 };
+
+/**
+ * Determine if 2 maps (associative arrays) are equal.
+ * @param  {Object} a
+ * @param  {Object} b
+ * @return {boolean}      True if they are equal.
+ */
+mapsEqual = function(a, b) {
+  if (a == b) {
+    return true;
+  }
+
+  if (a == null || b == null) {
+    return false;
+  }
+
+  if (Object.keys(a).length != Object.keys(b).length) {
+    return false;
+  }
+
+  for (key in a) {
+    if (a[key] != b[key]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Compare two arrays to see if they are equal.
+ * @param  {Array} a
+ * @param  {Array} b
+ * @return {boolean}   true if a and b are equal.
+ */
+function arraysEqual(a, b) {
+  if (a == b) {
+    return true;
+  }
+  if (a == null || b == null) {
+    return false;
+  }
+
+  if (a.length != b.length) {
+    return false;
+  }
+
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) {
+      return false;
+    }
+  }
+  return true;
+}

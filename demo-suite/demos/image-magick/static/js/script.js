@@ -71,8 +71,8 @@ ImageMagick.prototype.initialize = function() {
       '/' + DEMO_NAME + '/gce-cleanup', {
         squares: squares
       });
-  gce.checkIfAlive(function(data, numAlive) {
-    if (numAlive != 0) {
+  gce.getInstanceStates(function(data) {
+    if (data['stateCount']['TOTAL'] != 0) {
       $('#start').addClass('disabled');
       $('#reset').removeClass('disabled');
       alert('Some instances are already running! Hit reset.');

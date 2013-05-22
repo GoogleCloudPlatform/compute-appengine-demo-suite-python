@@ -43,14 +43,15 @@ class GceAppEngine(object):
         filter='name eq ^%s.*' % demo_name,
         maxResults=MAX_RESULTS)
 
-    # Compare to None here because instances could be an empty dictionary.
-    if instances is not None:
-      instance_dict = {}
-      for instance in instances:
-        instance_dict[instance.name] = {'status': instance.status}
-      json_instances = json.dumps(instance_dict)
-      request_handler.response.headers['Content-Type'] = 'application/json'
-      request_handler.response.out.write(json_instances)
+    instance_dict = {}
+    for instance in instances:
+      instance_dict[instance.name] = {'status': instance.status}
+
+    result_dict = {
+      'instances': instance_dict,
+    }
+    request_handler.response.headers['Content-Type'] = 'application/json'
+    request_handler.response.out.write(json.dumps(result_dict))
 
   def delete_demo_instances(self, request_handler, gce_project, demo_name):
     """Deletes instances for the demo.

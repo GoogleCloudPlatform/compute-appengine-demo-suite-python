@@ -25,12 +25,12 @@
  * @constructor
  * @param {Element} container The HTML element in which to display the
  *    counter.
- * @param {string} targetMetric Either 'numRunning' or 'numAlive' to
+ * @param {string} targetState Either 'RUNNING' or 'TOTAL' to
  *    differentiate which state class to count.
  * @param {Object} counterOptions Options for the counter object details can
  *    be found here: http://www.wilmslowastro.com/odometer/odometer.html.
  */
-var Counter = function(container, targetMetric, counterOptions) {
+var Counter = function(container, targetState, counterOptions) {
   if (!counterOptions) {
     counterOptions = {
       height: 30,
@@ -42,9 +42,9 @@ var Counter = function(container, targetMetric, counterOptions) {
   var counterElement = container.getContext('2d');
   this.counter_ = new odometer_(counterElement, counterOptions);
 
-  this.targetMetric = 'numRunning';
-  if (targetMetric) {
-    this.targetMetric = targetMetric;
+  this.targetState = 'RUNNING';
+  if (targetState) {
+    this.targetState = targetState;
   }
 };
 
@@ -60,10 +60,10 @@ Counter.prototype.counter_ = null;
  * Gce.heartbeat method, and is passed a dictionary containing the instance
  * status list and the num of running instances.
  * @param {Object} updateData Object mapping 'data' to the instance status
- *     information and 'numRunning' to the number of running instances.
+ *     information.
  */
 Counter.prototype.update = function(updateData) {
-  this.counter_.setValue(updateData[this.targetMetric]);
+  this.counter_.setValue(updateData['stateCount'][this.targetState]);
 };
 
 /**

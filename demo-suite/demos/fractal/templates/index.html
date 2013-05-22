@@ -6,35 +6,68 @@
 
 {% block extra_javascript %}
 <script type="text/javascript">
-  var DEMO_NAME = '{{ demo_name }}';
+var DEMO_NAME = '{{ demo_name }}';
 </script>
 <script type="text/javascript" src="/js/gce.js"></script>
 <script type="text/javascript" src="/js/squares.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
 <script type="text/javascript" src="/{{ demo_name }}/js/script.js"></script>
+<script type="text/javascript" src="/{{ demo_name }}/js/throttled_image_map.js"></script>
 {% endblock %}
 
 {% block content %}
-<h1>
-  Welcome to Fractal Generator!
-</h1>
-
-<p>
-  This demo creates 2 zoomable fractal images using the Maps API. The one
-  on the left is the 'slower' map, with fewer instances being used to serve
-  tiles than the one on the right.
-</p>
-
-<p>
-  <div>
-    <a class="btn" id="start">Start</a>
-    <a class="btn" id="reset">Reset</a>
-    <span id="spinner"><i class="icon-spinner icon-spin icon-2x"></i></span>
+<div class="row-fluid">
+  <div class="span2">
+    <h2>Fractals
+      <span id="spinner"><i class="icon-spinner icon-spin"></i></span>
+    </h2>
   </div>
-</p>
-
-<div class="row">
-  <div class="span6" id="fractal1"></div>
-  <div class="span6" id="fractal16"></div>
+  <div class="span5">
+    <h2>Single Instance <small>direct connect</small></h2>
+  </div>
+  <div class="span5">
+    <h2>Instance Cluster
+    {% if lb_enabled %}
+      <small>using load balancer<span> <i id="lbsOk" class="icon-ok-sign" style="visibility: hidden"> </i></small>
+    {% else %}
+      <small>direct connect</small>
+    {% endif %}
+    </h2>
+  </div>
 </div>
+
+<div class="row-fluid">
+  <div class="span2">
+    <hr>
+  </div>
+  <div class="span5">
+    <hr>
+  </div>
+  <div class="span5">
+    <hr>
+  </div>
+</div>
+
+<div class="row-fluid">
+  <div class="span2 btn-stack">
+    <a class="btn" id="start">Start VMs</a>
+    <a class="btn" id="reset">Stop VMs</a>
+    <hr>
+    {% if lb_enabled %}
+      <a class="btn" id="addServer">Add a VM</a>
+      <a class="btn" id="removeServer">Kill a VM</a>
+      <hr>
+    {% endif %}
+    <a class="btn" id="clearVars">Clear Stats</a>
+    <hr>
+    <a class="btn" id="toggleMaps">Show Maps</a>
+    <hr>
+    <a class="btn" id="randomPoi">Random POI</a>
+  </div>
+  <div class="span5" id="fractal1">
+  </div>
+  <div class="span5" id="fractalCluster">
+  </div>
+</div>
+
 {% endblock %}
