@@ -29,9 +29,12 @@
 </p>
 
 <p>
-  <input type="text" id="num-instances" value="5">
+  <input type="text" id="num-instances" value="{{startedVMs}}">
+  <input type="hidden" id="target-instances" value="{{targetVMs}}">
+  <input type="hidden" id="start-time" value="{{startTime}}">
   <a class="btn" id="start">Start</a>
   <a class="btn disabled" id="reset">Reset</a>
+  &nbsp;&nbsp;<span id="in-progress"></span>
 </p>
 
 <div>

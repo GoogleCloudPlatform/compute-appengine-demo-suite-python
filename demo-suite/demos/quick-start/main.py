@@ -19,17 +19,56 @@ from __future__ import with_statement
 __author__ = 'kbrisbin@google.com (Kathryn Hurley)'
 
 import lib_path
+import logging
 import google_cloud.gce as gce
 import google_cloud.gce_appengine as gce_appengine
 import google_cloud.oauth as oauth
 import jinja2
 import oauth2client.appengine as oauth2client
+import time
 import user_data
 import webapp2
 
+from google.appengine.ext import ndb
 from google.appengine.api import users
 
 DEMO_NAME = 'quick-start'
+
+class Objective(ndb.Model):
+  """ This data model keeps track of work in progress. """
+  # Disable caching of objective.
+  _use_memcache = False
+  _use_cache = False
+
+  # Desired number of VMs and start time. This will be >0 for a start
+  # request or 0 for a reset/stop request.
+  targetVMs = ndb.IntegerProperty()
+
+  # Number of VMs started by last start request. This is handy when
+  # recovering during a reset operation, so we can figure out how many 
+  # instances to depict in the UI.
+  startedVMs = ndb.IntegerProperty()
+
+  # Epoch time when last/current request was stated.
+  startTime = ndb.IntegerProperty()
+
+def getObjective(project_id):
+  key = ndb.Key("Objective", project_id)
+  return key.get()
+
+@ndb.transactional
+def updateObjective(project_id, targetVMs):
+  objective = getObjective(project_id)
+  if not objective: 
+    logging.info('objective not found, creating new, project=' + project_id)
+    key = ndb.Key("Objective", project_id)
+    objective = Objective(key=key)
+  objective.targetVMs = targetVMs
+  # Overwrite startedVMs only when starting, skip when stopping.
+  if targetVMs > 0:
+    objective.startedVMs = targetVMs 
+  objective.startTime = int(time.time())
+  objective.put()
 
 jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(''))
 oauth_decorator = oauth.decorator
@@ -50,7 +89,23 @@ class QuickStart(webapp2.RequestHandler):
 
     if not oauth_decorator.credentials.refresh_token:
       self.redirect(oauth_decorator.authorize_url() + '&approval_prompt=force')
-    variables = {'demo_name': DEMO_NAME}
+
+    targetVMs = 5
+    startedVMs = 5
+    startTime = 0
+
+    gce_project_id = data_handler.stored_user_data[user_data.GCE_PROJECT_ID]
+    objective = getObjective(gce_project_id)
+    if objective:
+      (targetVMs, startedVMs, startTime) = (objective.targetVMs, 
+        objective.startedVMs, objective.startTime)
+
+    variables = {
+      'demo_name': DEMO_NAME,
+      'targetVMs': targetVMs,
+      'startedVMs': startedVMs,
+      'startTime': startTime
+    }
     template = jinja_environment.get_template(
         'demos/%s/templates/index.html' % DEMO_NAME)
     self.response.out.write(template.render(variables))
@@ -96,6 +151,9 @@ class Instance(webapp2.RequestHandler):
         'Error inserting instances: ',
         resources=instances)
 
+    # Record objective in datastore so we can recover work in progress.
+    updateObjective(gce_project_id, num_instances)
+
     if response:
       self.response.headers['Content-Type'] = 'text/plain'
       self.response.out.write('starting cluster')
@@ -117,6 +175,8 @@ class Cleanup(webapp2.RequestHandler):
     gce_appengine.GceAppEngine().delete_demo_instances(
         self, gce_project, DEMO_NAME)
 
+    # Record reset objective in datastore so we can recover work in progress.
+    updateObjective(gce_project_id, 0)
 
 app = webapp2.WSGIApplication(
     [
