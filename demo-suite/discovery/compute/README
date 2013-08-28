@@ -1,0 +1,6 @@
+This directory is for storing local copies of discovery documents, which
+speeds up performance. The small gain in performance does not seem like
+it would compensate for the problem of a static API, which cannot adapt
+to changes, so this feature has been disabled in lib/google_cloud/gce.py,
+however, this directory (and it's previous contents) remain intact in case
+we decide to reuse local discovery docs in the future.

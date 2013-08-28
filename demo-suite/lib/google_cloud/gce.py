@@ -72,14 +72,19 @@ class GceProject(object):
     if settings:
       self.settings.update(settings)
 
-    self.gce_url = '%s/%s' % (GCE_URL, self.settings['compute']['api_version'])
+    api_version = self.settings['compute']['api_version']
+    self.gce_url = '%s/%s' % (GCE_URL, api_version)
 
-    discovery_doc_path = 'discovery/compute/%s.json' % self.settings['compute']['api_version']
-    discovery_doc = open(discovery_doc_path, 'r').read()
+    # Ability to build API from a local discovery doc is disabled here,
+    # by commenting out code. We're not removing the code altogether, 
+    # in case we ever want to revert to using a local discovery doc.
+    #discovery_doc_path = 'discovery/compute/%s.json' % api_version
+    #discovery_doc = open(discovery_doc_path, 'r').read()
 
     auth_http = self._auth_http(credentials)
-    self.service = discovery.build_from_document(
-        discovery_doc, self.settings['compute']['api_version'], http=auth_http)
+    #self.service = discovery.build_from_document(
+      #discovery_doc, api_version, http=auth_http)
+    self.service = discovery.build('compute', api_version, http=auth_http)
 
     self.project_id = project_id
     if not self.project_id:
@@ -422,10 +427,7 @@ class GceResource(object):
     """Set any defaults."""
 
     if not self.name:
-      if self.type == 'machineType':
-        self.name = self.gce_project.settings['compute']['machine_type']
-      else:
-        self.name = self.gce_project.settings['compute'][self.type]
+      self.name = self.gce_project.settings['compute'][self.type]
 
 class DiskMount(object):
   """A class for mounting options of a disk into a VM.
@@ -561,7 +563,7 @@ class Instance(GceResource):
     else:
       self.image = None
     self.kernel = kernel
-    self.machine_type = MachineType(machine_type_name)
+    self.machine_type = MachineType(machine_type_name, zone_name)
     self.network_interfaces = network_interfaces
     self.disk_mounts = disk_mounts or []
     self.metadata = metadata
@@ -605,7 +607,8 @@ class Instance(GceResource):
 
     self.name = json_resource['name']
     self.zone_name = Zone(json_resource['zone'].split('/')[-1])
-    self.machine_type = MachineType(json_resource['machineType'].split('/')[-1])
+    self.machine_type = MachineType(json_resource['machineType'].split('/')[-1],
+                                    self.zone_name)
     self.network_interfaces = json_resource['networkInterfaces']
     if json_resource.get('description', None):
       self.description = json_resource['description']
@@ -961,15 +964,16 @@ class MachineType(GceResource):
     name: The string name of the machine type.
   """
 
-  def __init__(self, name=None):
+  def __init__(self, name=None, zone_name=None):
     """Initialize the MachineType class.
 
     Args:
       name: The string name of the machine type.
     """
 
-    super(MachineType, self).__init__('machineType', 'global')
+    super(MachineType, self).__init__('machineType', 'zonal')
     self.name = name
+    self.zone = Zone(zone_name)
 
   def service_resource(self):
     """Return the machineTypes method of apiclient.discovery.Resource object.
@@ -980,6 +984,13 @@ class MachineType(GceResource):
 
     return self.gce_project.service.machineTypes()
 
+  def set_defaults(self):
+    """Set any defaults before insert."""
+    if not self.name:
+      self.name = self.gce_project.settings['compute']['machine_type']
+    self.zone.gce_project = self.gce_project
+    if not self.zone.name:
+      self.zone.set_defaults()
 
 class Zone(GceResource):
   """A class representing a GCE Zone resource.
