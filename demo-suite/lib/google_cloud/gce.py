@@ -23,6 +23,7 @@ import lib_path
 from apiclient import discovery
 from apiclient import errors as api_errors
 from apiclient import http
+from google.appengine.api import memcache
 import httplib2
 import oauth2client.client as client
 try:
@@ -370,7 +371,7 @@ class GceProject(object):
       An authorized instance of httplib2.Http.
     """
 
-    http = httplib2.Http(timeout=30)
+    http = httplib2.Http(memcache, timeout=30)
     auth_http = credentials.authorize(http)
     return auth_http
 
