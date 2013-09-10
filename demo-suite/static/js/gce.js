@@ -264,7 +264,7 @@ Gce.prototype.heartbeat_ = function(numInstances, callback, terminalState) {
   // is complete), start the polling immediately to refresh state ASAP,
   // instead of waiting 2s to refresh the display.
   var that = this;
-  if ((typeof Recovering != undefined) && Recovering) {
+  if ((typeof Recovering !== 'undefined') && Recovering) {
     that.getStatuses_(success);
   } else {
     setTimeout(function() {
