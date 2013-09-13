@@ -135,7 +135,7 @@ Gce.prototype.startInstances = function(numInstances, startOptions) {
     }
   }
 
-  if ((typeof Recovering !== 'undefined') && (!Recovering)) {
+  if ((typeof Recovering === 'undefined') || (!Recovering)) {
     var ajaxRequest = {
       type: 'POST',
       url: this.startInstanceUrl_,
@@ -170,7 +170,7 @@ Gce.prototype.startInstances = function(numInstances, startOptions) {
 Gce.prototype.stopInstances = function(callback) {
   var data = {}
 
-  if (this.gceUiOptions.timer.start) {
+  if (this.gceUiOptions.timer && this.gceUiOptions.timer.start) {
     this.gceUiOptions.timer.start();
   }
 

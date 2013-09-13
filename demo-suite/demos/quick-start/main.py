@@ -143,7 +143,7 @@ class Instance(webapp2.RequestHandler):
         zone_name=gce_zone_name)
 
     num_instances = int(self.request.get('num_instances'))
-    instances = [gce.Instance('%s-%d' % (DEMO_NAME, i))
+    instances = [gce.Instance('%s-%d' % (DEMO_NAME, i), zone_name=gce_zone_name)
                  for i in range(num_instances)]
     response = gce_appengine.GceAppEngine().run_gce_request(
         self,

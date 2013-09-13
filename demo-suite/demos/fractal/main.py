@@ -421,9 +421,11 @@ class Fractal(webapp2.RequestHandler):
         image_project_id, image_name = image
 
 
+      gce_zone_name = data_handler.stored_user_data[user_data.GCE_ZONE_NAME]
       instance = gce.Instance(
           name=instance_name,
           machine_type_name=MACHINE_TYPE,
+          zone_name=gce_zone_name,
           image_name=image_name,
           image_project_id=image_project_id,
           disk_mounts=disk_mounts,
